@@ -273,12 +273,12 @@ vector<vector<Edge>> CliqueEnum::find_bicliquesbp2(
     std::unordered_set<Edge, EdgeHash>,
     std::unordered_set<Edge, EdgeHash>>> stack;
 
-    // Edge u = *ranges::max_element(subg,
-    //     [&](const Edge& a, const Edge& b) {
-    //         return ranges::count_if(adj[a], [&](const Edge& x) { return cand.count(x); }) <
-    //             ranges::count_if(adj[b], [&](const Edge& x) { return cand.count(x); });
-    // });
-    Edge u = getPivotEdge(cand, subg, adj);
+    Edge u = *ranges::max_element(subg,
+        [&](const Edge& a, const Edge& b) {
+            return ranges::count_if(adj[a], [&](const Edge& x) { return cand.count(x); }) <
+                ranges::count_if(adj[b], [&](const Edge& x) { return cand.count(x); });
+    });
+    // Edge u = getPivotEdge(cand, subg, adj);
 
     auto ext_u = setDifference(cand, adj[u]);
     int calls = 0;
@@ -314,7 +314,6 @@ vector<vector<Edge>> CliqueEnum::find_bicliquesbp2(
                                 ranges::count_if(adj[b], [&](const Edge& x) { return cand.count(x); });
                     });
                     // u = getPivotEdge(cand, subg, adj);
-
                     ext_u.clear();
                     ext_u = setDifference(cand, adj[u]);
                 }
