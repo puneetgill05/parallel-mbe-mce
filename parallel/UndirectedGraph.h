@@ -22,8 +22,8 @@ class UndirectedGraph {
 public:
     map<Vertex, unordered_set<Vertex>> _adjacencyList;
     UndirectedGraph();
-    explicit UndirectedGraph(map<string, vector<string>> inputGraph);
-    explicit UndirectedGraph(map<Vertex, vector<Vertex>> inputGraph);
+    explicit UndirectedGraph(unordered_map<string, vector<string>> inputGraph);
+    explicit UndirectedGraph(unordered_map<Vertex, vector<Vertex>> inputGraph);
 
     static UndirectedGraph createGraph(map<string, vector<string>>);
     void addEdge(const Vertex &u, const Vertex &v);

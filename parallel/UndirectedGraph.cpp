@@ -22,7 +22,7 @@ UndirectedGraph::UndirectedGraph() {
 //     numberOfEdges = computeNumberOfEdges();
 }
 
-UndirectedGraph::UndirectedGraph(map<string, vector<string>> inputGraph) {
+UndirectedGraph::UndirectedGraph(unordered_map<string, vector<string>> inputGraph) {
     for (const auto& [u, neighbors] : inputGraph) {
         addVertex(Vertex{u});
         for (const auto& v : neighbors) {
@@ -35,7 +35,7 @@ UndirectedGraph::UndirectedGraph(map<string, vector<string>> inputGraph) {
     numberOfEdges = computeNumberOfEdges();
 }
 
-UndirectedGraph::UndirectedGraph(map<Vertex, vector<Vertex>> inputGraph) {
+UndirectedGraph::UndirectedGraph(unordered_map<Vertex, vector<Vertex>> inputGraph) {
     for (const auto& [u, neighbors] : inputGraph) {
         addVertex(u);
         for (const auto& v : neighbors) {

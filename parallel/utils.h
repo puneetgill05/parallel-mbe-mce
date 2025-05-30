@@ -18,6 +18,7 @@
 
 
 #include "Vertex.h"
+#include "abseil-cpp/absl/container/flat_hash_set.h"
 
 template <typename C>
 concept Container = requires(C c) {
@@ -26,9 +27,18 @@ concept Container = requires(C c) {
     c.end();
 };
 
+
+
 class utils {
     static int size;
-
+    using Edge = std::tuple<Vertex, Vertex>;
+    struct EdgeHash {
+        std::size_t operator()(const std::tuple<Vertex, Vertex>& t) const {
+            auto h1 = std::hash<Vertex>()(std::get<0>(t));
+            auto h2 = std::hash<Vertex>()(std::get<1>(t));
+            return h1 ^ (h2 << 1); // Combine hashes
+        }
+    };
 public:
 
     static void unordered_intersect(tbb::concurrent_unordered_set<Vertex> &A,
@@ -155,11 +165,22 @@ public:
         return Z;
     }
 
+    template<typename T>
+    static unordered_set<T> setDifference(unordered_set<T>& S1, unordered_set<T>& S2) {
+        unordered_set<T> Z;
+        for (auto s1 : S1) {
+            if (!S2.contains(s1)) {
+                Z.insert(s1);
+            }
+        }
+        return Z;
+    }
+
     /** setDifference(S1, S2): S1 - S2
 **/
     template <typename T>
-    static tbb::concurrent_set<T> setDifferenceParallel(tbb::concurrent_set<T> S1, tbb::concurrent_set<T> S2) {
-        tbb::concurrent_set<T> Z;
+    static tbb::concurrent_unordered_set<T> setDifferenceParallel(tbb::concurrent_unordered_set<T> S1, tbb::concurrent_unordered_set<T> S2) {
+        tbb::concurrent_unordered_set<T> Z;
         // parallel_for_each(S1.begin(), S1.end(), [&](Vertex s1){
         for (auto s1 : S1) {
             if (!S2.contains(s1)) {
@@ -183,36 +204,36 @@ public:
         return Z;
     }
 
-    template<typename T>
-    static unordered_set<T> setRemove(unordered_set<T> S, T x) {
-            unordered_set<T> Z;
-            for (const auto s : S) {
-                if (s != x) {
-                    Z.insert(s);
-                }
-            }
-            return Z;
-        }
+    // template<typename T>
+    // static unordered_set<T> setRemove(unordered_set<T> S, T x) {
+    //         unordered_set<T> Z;
+    //         for (const auto s : S) {
+    //             if (s != x) {
+    //                 Z.insert(s);
+    //             }
+    //         }
+    //         return Z;
+    //     }
 
     /** setUnion(S1, S2): S1 + S2
     **/
-    template<typename R, typename C1, typename C2>
-    static R setUnion(C1 S1, C2 S2) {
-        R Z;
-        for (const auto s1 : S1) {
-                Z.insert(s1);
-        }
-        for (const auto s2 : S2) {
-            Z.insert(s2);
-        }
-        return Z;
-    }
+    // template<typename R, typename C1, typename C2>
+    // static R setUnion(C1 S1, C2 S2) {
+    //     R Z;
+    //     for (const auto s1 : S1) {
+    //             Z.insert(s1);
+    //     }
+    //     for (const auto s2 : S2) {
+    //         Z.insert(s2);
+    //     }
+    //     return Z;
+    // }
 
     /** setUnion(S1, S2): S1 + S2
 **/
     template<typename T>
-    static T setUnion(T S1, T S2) {
-        T Z;
+    static unordered_set<T> setUnion(unordered_set<T>& S1, unordered_set<T>& S2) {
+        unordered_set<T> Z;
         for (const auto s1 : S1) {
             Z.insert(s1);
         }
@@ -225,8 +246,8 @@ public:
 /** setUnion(S1, S2): S1 + S2
 **/
     template<typename T>
-    static tbb::concurrent_set<T> setUnionParallel(tbb::concurrent_set<T> S1, tbb::concurrent_set<T> S2) {
-        tbb::concurrent_set<T> Z;
+    static tbb::concurrent_unordered_set<T> setUnionParallel(tbb::concurrent_unordered_set<T> S1, tbb::concurrent_unordered_set<T> S2) {
+        tbb::concurrent_unordered_set<T> Z;
         // parallel_for_each(S1.begin(), S1.end(), [&](Vertex s1){
         for (auto s1 : S1) {
             Z.insert(s1);
@@ -242,53 +263,25 @@ public:
 
 /** setIntersect(S1, S2): S1 & S2
 **/
-    template<typename R, typename C1, typename C2>
-    static R setIntersect(C1& S1, C2& S2) {
-        R Z;
-        for (const auto& s1 : S1) {
-            if (S2.contains(s1)) {
-                Z.insert(s1);
+    template<typename C>
+    static C setIntersect(C& S1, C& S2) {
+        const C& small = (S1.size() < S2.size()) ? S1 : S2;
+        const C& large = (S1.size() < S2.size()) ? S2 : S1;
+
+        C result;
+        result.reserve(std::min(S1.size(), S2.size()));  // Reserve space
+
+        for (auto x : small) {
+            if (large.find(x) != large.end()) {
+                result.insert(x);
             }
         }
-        return Z;
+        return result;
     }
 
     template<typename T>
-    static vector<T> setIntersect(set<T>& S1, set<T>& S2) {
-        vector<T> Z;
-        for (const auto& s1 : S1) {
-            if (S2.contains(s1)) {
-                Z.push_back(s1);
-            }
-        }
-        return Z;
-    }
-
-
-    /** setIntersect(S1, S2): S1 & S2
-    **/
-    template<typename T>
-    static T setIntersect(T S1, T S2) {
-        T Z;
-        if (S1.size() < S2.size()) {
-            for (auto s1 : S1) {
-                if (S2.contains(s1)) {
-                    Z.insert(s1);
-                }
-            }
-        } else {
-            for (auto s2 : S2) {
-                if (S1.contains(s2)) {
-                    Z.insert(s2);
-                }
-            }
-        }
-        return Z;
-    }
-
-    template<typename T>
-    static tbb::concurrent_set<T> setIntersectParallel(tbb::concurrent_set<T> S1, tbb::concurrent_set<T> S2) {
-        tbb::concurrent_set<T> Z;
+    static tbb::concurrent_unordered_set<T> setIntersectParallel(tbb::concurrent_unordered_set<T>& S1, tbb::concurrent_unordered_set<T>& S2) {
+        tbb::concurrent_unordered_set<T> Z;
         if (S1.size() < S2.size()) {
             // parallel_for_each(S1.begin(), S1.end(), [&](Vertex s1){
             for (auto s1 : S1) {
@@ -310,32 +303,60 @@ public:
     }
 
     template<typename T>
-   static unordered_set<T> setIntersect(unordered_set<T> S1, unordered_set<T> S2) {
-        set<T> Z;
-        if (S1.size() < S2.size()) {
-            for (auto s1 : S1) {
-                if (S2.contains(s1)) {
-                    Z.insert(s1);
-                }
-            }
-        } else {
-            for (auto s2 : S2) {
-                if (S1.contains(s2)) {
-                    Z.insert(s2);
-                }
+    static unordered_set<T> setIntersect(unordered_set<T>& S1, unordered_set<T>& S2) {
+        const std::unordered_set<T>& small = (S1.size() < S2.size()) ? S1 : S2;
+        const std::unordered_set<T>& large = (S1.size() < S2.size()) ? S2 : S1;
+
+        unordered_set<T> result;
+        result.reserve(std::min(S1.size(), S2.size()));  // Reserve space
+
+        for (T x : small) {
+            if (large.find(x) != large.end()) {
+                result.insert(x);
             }
         }
-
-        unordered_set<T> Z_unordered(Z.begin(), Z.end());
-        return Z_unordered;
+        return result;
     }
+
+    template<typename T>
+    static absl::flat_hash_set<T> setIntersect(absl::flat_hash_set<T>& S1, absl::flat_hash_set<T>& S2) {
+        const absl::flat_hash_set<T>& small = (S1.size() < S2.size()) ? S1 : S2;
+        const absl::flat_hash_set<T>& large = (S1.size() < S2.size()) ? S2 : S1;
+
+        absl::flat_hash_set<T> result;
+        result.reserve(std::min(S1.size(), S2.size()));  // Reserve space
+
+        for (T x : small) {
+            if (large.find(x) != large.end()) {
+                result.insert(x);
+            }
+        }
+        return result;
+    }
+
+
+    // template<typename T>
+    // static unordered_set<T> setIntersect(tbb::concurrent_unordered_set<T>& S1, unordered_set<T>& S2) {
+    //     const std::unordered_set<T>& small = (S1.size() < S2.size()) ? S1 : S2;
+    //     const std::unordered_set<T>& large = (S1.size() < S2.size()) ? S2 : S1;
+    //
+    //     unordered_set<T> result;
+    //     for (const T& x : small) {
+    //         if (large.contains(x)) {
+    //             result.insert(x);
+    //         }
+    //     }
+    //     return result;
+    // }
+
+
 
     /** setAdd(S1, x): S1 + {x}
 **/
     template<typename C, typename T>
     static C setAdd(C& S, T x) {
         C Z;
-        for (const auto& s : S) {
+        for (auto s : S) {
             Z.insert(s);
         }
         Z.insert(x);
@@ -346,7 +367,7 @@ public:
 **/
     // template<typename C1, typename C2>
     static bool isSubsetEq(unordered_set<Vertex>& S1, unordered_set<Vertex>& S2) {
-        for (const auto& s : S1) {
+        for (auto s : S1) {
             if (!S2.contains(s)) {
                 return false;
             }
@@ -378,9 +399,9 @@ public:
 
 
 
-    static map<Vertex, vector<Vertex>> readup(const string &upfilename) {
+    static unordered_map<Vertex, vector<Vertex>> readup(const string &upfilename) {
         ifstream infile(upfilename);
-        map<Vertex, vector<Vertex>> up;
+        unordered_map<Vertex, vector<Vertex>> up;
 
 
         string line;
@@ -427,9 +448,77 @@ public:
         return false;
     }
 
-    static set<tuple<Vertex, Vertex>> getedgeset(map<tuple<Vertex, Vertex>, tuple<Vertex, Vertex, int>> em, map<Vertex,
-    vector<Vertex>>
-    up) {
+
+    static set<tuple<Vertex, Vertex>> getNeighbouringEdges(tuple<Vertex, Vertex> e, map<tuple<Vertex, Vertex>,
+    tuple<Vertex, Vertex, int>> em, unordered_map<Vertex, vector<Vertex>> up,
+        unordered_map<Vertex, vector<Vertex>> pu) {
+        set<tuple<Vertex, Vertex>> neighs;
+        Vertex u = get<0>(e);
+        Vertex p = get<1>(e);
+
+        set<Vertex> uprimes;
+        for (const auto& u_prime : pu[p]) {
+            if (u_prime == u) continue;
+            uprimes.insert(u_prime);
+            tuple f(u_prime, p);
+
+            if (!hasbeenremoved(f, em)) {
+                neighs.insert(f);
+            }
+        }
+
+        set<Vertex> pprimes;
+        for (const auto& p_prime : up[u]) {
+            if (p_prime == p) continue;
+            pprimes.insert(p_prime);
+            tuple f(u, p_prime);
+
+            if (!hasbeenremoved(f, em)) {
+                neighs.insert(f);
+            }
+        }
+
+        for (const auto& u_prime : uprimes) {
+            for (const auto& p_prime : pprimes) {
+                vector u_prime_neighs = up[u_prime];
+                bool p_prime_is_neigh = std::find(u_prime_neighs.begin(), u_prime_neighs.end(), p_prime) != u_prime_neighs.end();
+                if (!p_prime_is_neigh ) continue;
+                tuple f(u_prime, p_prime);
+
+                if (!hasbeenremoved(f, em) && isNeighbour(e, f, up)) {
+                    neighs.insert(f);
+                }
+            }
+        }
+        return neighs;
+    }
+
+    static bool isNeighbour(tuple<Vertex, Vertex> e, tuple<Vertex, Vertex> f, unordered_map<Vertex, vector<Vertex>> up) {
+        Vertex u = get<0>(e);
+        Vertex p = get<1>(e);
+        Vertex u_prime = get<0>(f);
+        Vertex p_prime = get<1>(f);
+
+        bool p_neighbour_with_u_prime = std::find(up.at(u_prime).begin(), up.at(u_prime).end(), p) != up.at(u_prime).end();
+        bool p_prime_neighbour_with_u = std::find(up.at(u).begin(), up.at(u).end(), p_prime) != up.at(u).end();
+        return p_neighbour_with_u_prime && p_prime_neighbour_with_u;
+    }
+
+    static unordered_map<Vertex, vector<Vertex>> uptopu(unordered_map<Vertex, vector<Vertex>> up) {
+        unordered_map<Vertex, vector<Vertex>> pu;
+        for (auto & it : up) {
+            Vertex u = it.first;
+            vector<Vertex> permissions = it.second;
+            for (auto& p : permissions) {
+                pu[p].push_back(u);
+            }
+        }
+        return pu;
+    }
+
+
+    static set<tuple<Vertex, Vertex>> getedgeset(map<tuple<Vertex, Vertex>, tuple<Vertex, Vertex, int>> em,
+    unordered_map<Vertex, vector<Vertex>> up) {
         // set of all edges
         set<tuple<Vertex, Vertex>> edgeset{};
         for (auto it = up.begin(); it != up.end(); ++it) {
@@ -464,11 +553,11 @@ public:
         return s;
     }
 
-    static map<tuple<Vertex, Vertex>, tuple<Vertex, Vertex, int>> readem(string emfile) {
+    static map<Edge, tuple<Vertex, Vertex, int>> readem(string emfile) {
         std::ifstream infile(emfile);
         std::string line;
 
-        map<tuple<Vertex, Vertex>, tuple<Vertex, Vertex, int>> ret;
+        map<Edge, tuple<Vertex, Vertex, int>> ret;
 
         while (std::getline(infile, line)) {
             size_t colon_pos = line.find(':');

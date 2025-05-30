@@ -10,6 +10,7 @@ enable_language(CUDA)
 
 #find_package(Boost REQUIRED COMPONENTS filesystem)
 
+add_subdirectory(abseil-cpp)  # Path to Abseil source
 
 
 
@@ -49,6 +50,10 @@ add_executable(parallel main.cpp
 #        cuda/Graph.cpp
 #        cuda/Graph.h)
 
-target_link_libraries(parallel PRIVATE TBB::tbb)
+
+
+target_link_libraries(parallel
+        absl::flat_hash_set
+        TBB::tbb)
 #target_link_libraries(parallel Boost::filesystem)
 
