@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    auto cliques = cliqueEnum.find_bicliquesbp2(em, up, utils::uptopu(up));
+    auto cliques = cliqueEnum.find_cliquesbp2(em, up, utils::uptopu(up));
     cout << "cliques: " << cliques.size() << endl;
 
     auto end = std::chrono::high_resolution_clock::now();

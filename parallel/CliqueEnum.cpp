@@ -242,7 +242,7 @@ unordered_set<Edge, EdgeHash>, EdgeHash> adj) {
     return max_u;
 }
 
-vector<vector<Edge>> CliqueEnum::find_bicliquesbp2(
+vector<vector<Edge>> CliqueEnum::find_cliquesbp2(
     const map<Edge, tuple<Vertex, Vertex, int>>& em,
     const unordered_map<Vertex, vector<Vertex>>& up,
     const unordered_map<Vertex, vector<Vertex>>& pu

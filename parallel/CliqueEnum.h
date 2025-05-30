@@ -32,7 +32,7 @@ public:
     tbb::concurrent_unordered_set<Vertex> fini, int nthreads);
 
 
-    vector<vector<tuple<Vertex, Vertex>>> find_bicliquesbp2(const map<tuple<Vertex, Vertex>,
+    vector<vector<tuple<Vertex, Vertex>>> find_cliquesbp2(const map<tuple<Vertex, Vertex>,
         tuple<Vertex, Vertex, int>>& em, const unordered_map<Vertex, vector<Vertex>>& up, const unordered_map<Vertex, vector<Vertex>>& pu);
 
 };
